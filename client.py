@@ -2,7 +2,7 @@ import socket
 
 from builtins import input
 
-HOST = '192.168.0.10'
+HOST = 'localhost'
 PORT = 8080
 udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 print('CLIENTEEEEE')
@@ -24,3 +24,6 @@ while msg != '\x18':
 udp.close()
 
 
+
+
+# para executar python3 client.py
