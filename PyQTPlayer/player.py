@@ -1,6 +1,7 @@
 # PyQt5 Video player
+#!/usr/bin/env python
 
-from PyQt5.QtCore import QDir, Qt, QUrl
+from PyQt5.QtCore import QDir, Qt, QUrl, QFile, QIODevice, QBuffer, QByteArray
 from PyQt5.QtMultimedia import QMediaContent, QMediaPlayer
 from PyQt5.QtMultimediaWidgets import QVideoWidget
 from PyQt5.QtWidgets import (QApplication, QFileDialog, QHBoxLayout, QLabel,
@@ -76,13 +77,28 @@ class VideoWindow(QMainWindow):
         self.mediaPlayer.error.connect(self.handleError)
 
     def openFile(self):
-        fileName, _ = QFileDialog.getOpenFileName(self, "Open Movie",
-                QDir.homePath())
 
-        if fileName != '':
-            self.mediaPlayer.setMedia(
-                    QMediaContent(QUrl.fromLocalFile(fileName)))
-            self.playButton.setEnabled(True)
+        file = QFile('video.avi')
+
+        isOpen = file.open(QIODevice.ReadOnly)
+
+        buffer = QBuffer()
+        buffer.open(QIODevice.ReadWrite)
+
+
+        if isOpen:
+            while not file.atEnd():
+                temp = file.readLine()
+                temp = QByteArray.fromBase64(temp)
+                buffer.write(temp)
+
+        #self.mediaPlayer.setMedia(QMediaContent(), buffer)
+
+        self.mediaPlayer.setMedia(
+               QMediaContent(QUrl.fromLocalFile('video.avi')))
+
+        self.playButton.setEnabled(True)
+        self.mediaPlayer.play()
 
     def exitCall(self):
         sys.exit(app.exec_())
@@ -114,7 +130,7 @@ class VideoWindow(QMainWindow):
         self.playButton.setEnabled(False)
         self.errorLabel.setText("Error: " + self.mediaPlayer.errorString())
 
-class main():
+if __name__ == '__main__':
     app = QApplication(sys.argv)
     player = VideoWindow()
     player.resize(640, 480)
