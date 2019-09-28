@@ -1,1 +1,3 @@
-lindo trabalho para a disciplina de redes
+lindo trabalho para a disciplina de redes.
+
+Streaming utilizando sockets.
