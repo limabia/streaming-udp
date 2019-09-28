@@ -15,6 +15,9 @@ while True:
     message, client = udp.recvfrom(BYTE)  # aqui temos que ver certinho a questão da mensagem
     message = message.decode()
     print(message)
+
+
+
 udp.close()
 
 
