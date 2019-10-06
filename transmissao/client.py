@@ -6,37 +6,29 @@ import cv2
 import numpy as np
 
 
-def arg_parse():
-    parser = argparse.ArgumentParser(description='Server')
-    parser.add_argument("--video", help="Path to video file", default=0)
-    parser.add_argument("--fps", help="Set video FPS", type=int, default=14)
-    parser.add_argument("--gray", help="Convert video into gray scale", action="store_true")
-    parser.add_argument("--ip", help="Client IP address", default="localhost")
-    parser.add_argument("--port", help="UDP port number", type=int, default=60444)
-
-    return parser.parse_args()
+def udp_socket(args):
+    # conexao do cliente
+    address = (args.ip, args.port)
+    udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    return address, udp
 
 
 def main(args):
-    video = 'teste.mp4'
-    address = (args.ip, args.port)
+    address, udp = udp_socket(args)
 
-    cap = cv2.VideoCapture(video) # args.video
-
-    video_fps = cap.get(cv2.CAP_PROP_FPS)
+    video = cv2.VideoCapture('teste.mp4')  # TODO pegar esse video de acordo com a escolha do cliente dada a lista
+    video_fps = video.get(cv2.CAP_PROP_FPS)
     desired_fps = args.fps
     max_size = 65536 - 8  # less 8 bytes of video time
     if desired_fps > video_fps:
         desired_fps = video_fps
 
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-
     try:
         transmission_start = time.time()
         processing_start = time.time()
         jpg_quality = 80
-        while cap.isOpened():
-            ret, frame = cap.read()
+        while video.isOpened():
+            ret, frame = video.read()
             if not ret:
                 break
 
@@ -54,13 +46,13 @@ def main(args):
             if not result:
                 break
 
-            vt = np.array([cap.get(cv2.CAP_PROP_POS_MSEC) / 1000], dtype=np.float64)
+            vt = np.array([video.get(cv2.CAP_PROP_POS_MSEC) / 1000], dtype=np.float64)
             data = encoded_img.tobytes() + vt.tobytes()
 
-            sock.sendto(data, address)
+            udp.sendto(data, address)
 
             end = time.time()
-            print('FPS: {0:0.2f}'.format(1 / (end - transmission_start)))
+            # print('FPS: {0:0.2f}'.format(1 / (end - transmission_start)))
             transmission_start = time.time()
 
             processing_time = end - processing_start
@@ -70,13 +62,25 @@ def main(args):
             processing_start = time.time()
 
     except KeyboardInterrupt:
-        cap.release()
-        sock.close()
+        video.release()
+        udp.close()
 
-    cap.release()
-    sock.close()
+    video.release()
+    udp.close()
+
+
+def arg_parse():
+    parser = argparse.ArgumentParser(description='Server')
+    parser.add_argument("--video", help="Path to video file", default=0)
+    parser.add_argument("--fps", help="Set video FPS", type=int, default=14)
+    parser.add_argument("--gray", help="Convert video into gray scale", action="store_true")
+    parser.add_argument("--ip", help="Client IP address", default="localhost")
+    parser.add_argument("--port", help="UDP port number", type=int, default=60444)
+
+    return parser.parse_args()
 
 
 if __name__ == '__main__':
     arguments = arg_parse()
+    print(arguments)
     main(arguments)

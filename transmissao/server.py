@@ -6,14 +6,6 @@ import cv2
 import numpy as np
 
 
-def arg_parse():
-    parser = argparse.ArgumentParser(description='Client')
-    parser.add_argument('--save', default=False, help='Save video', action='store_true')
-    parser.add_argument("--ip", help="Client IP address", default="localhost")
-    parser.add_argument("--port", help="UDP port number", type=int, default=60444)
-    return parser.parse_args()
-
-
 def get_video_writer(frame):
     w, h = frame.shape[1], frame.shape[0]
     is_color = True
@@ -26,14 +18,20 @@ def get_video_writer(frame):
     return vr
 
 
+# estabelece a conexao udp
+def udp_socket(ip, porta):
+    udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    udp.bind((ip, porta))
+    return udp
+
+
 def main(args):
     data = b''
     buffer_size = 65536
     window = 'video streaming'
     out = None
 
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    sock.bind((args.ip, args.port))
+    udp = udp_socket(args.ip, args.port)
 
     if not args.save:
         cv2.namedWindow(window, cv2.WINDOW_NORMAL)
@@ -42,7 +40,7 @@ def main(args):
     try:
         start = time.time()
         while True:
-            data += sock.recv(buffer_size)
+            data += udp.recv(buffer_size)
             a = data.find(b'\xff\xd8')
             b = data.find(b'\xff\xd9')
             if a != -1 and b != -1:
@@ -66,16 +64,25 @@ def main(args):
 
     except KeyboardInterrupt:
         cv2.destroyAllWindows()
-        sock.close()
+        udp.close()
         if args.save:
             out.release()
 
     cv2.destroyAllWindows()
-    sock.close()
+    udp.close()
     if args.save:
         out.release()
 
 
+def arg_parse():
+    parser = argparse.ArgumentParser(description='Client')
+    parser.add_argument('--save', default=False, help='Save video', action='store_true')
+    parser.add_argument("--ip", help="Client IP address", default="localhost")
+    parser.add_argument("--port", help="UDP port number", type=int, default=60444)
+    return parser.parse_args()
+
+
 if __name__ == '__main__':
     arguments = arg_parse()
+    print(arguments)
     main(arguments)
