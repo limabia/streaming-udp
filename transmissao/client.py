@@ -73,7 +73,7 @@ def arg_parse():
     parser.add_argument("--fps", help="Set video FPS", type=int, default=14)
     parser.add_argument("--gray", help="Convert video into gray scale", action="store_true")
     parser.add_argument("--ip", help="Client IP address", default="localhost")
-    parser.add_argument("--port", help="UDP port number", type=int, default=60444)
+    parser.add_argument("--port", help="UDP port number", type=int, default=8080)
 
     return parser.parse_args()
 

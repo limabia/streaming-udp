@@ -59,7 +59,6 @@ def main(args):
                     if cv2.waitKey(1) & 0xFF == ord('q'):
                         break
                 end = time.time()
-                print('FPS: {0:0.2f}'.format(1 / (end - start)))
                 start = time.time()
 
     except KeyboardInterrupt:
@@ -78,7 +77,7 @@ def arg_parse():
     parser = argparse.ArgumentParser(description='Client')
     parser.add_argument('--save', default=False, help='Save video', action='store_true')
     parser.add_argument("--ip", help="Client IP address", default="localhost")
-    parser.add_argument("--port", help="UDP port number", type=int, default=60444)
+    parser.add_argument("--port", help="UDP port number", type=int, default=8080)
     return parser.parse_args()
 
 
