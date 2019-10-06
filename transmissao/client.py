@@ -6,7 +6,7 @@ import cv2
 import numpy as np
 
 
-def udp_socket(args):
+def estabelece_conexao(args):
     # conexao do cliente
     address = (args.ip, args.port)
     udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -14,9 +14,9 @@ def udp_socket(args):
 
 
 def main(args):
-    address, udp = udp_socket(args)
+    address, udp = estabelece_conexao(args)
 
-    video = cv2.VideoCapture('teste.mp4')  # TODO pegar esse video de acordo com a escolha do cliente dada a lista
+    video = cv2.VideoCapture('teste.mp4')  # TODO Enviar para o server o video escolhido dado a lista
     video_fps = video.get(cv2.CAP_PROP_FPS)
     desired_fps = args.fps
     max_size = 65536 - 8  # less 8 bytes of video time
@@ -52,8 +52,6 @@ def main(args):
             udp.sendto(data, address)
 
             end = time.time()
-            # print('FPS: {0:0.2f}'.format(1 / (end - transmission_start)))
-            transmission_start = time.time()
 
             processing_time = end - processing_start
             desired_time = 1 / desired_fps

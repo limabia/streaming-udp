@@ -19,19 +19,19 @@ def get_video_writer(frame):
 
 
 # estabelece a conexao udp
-def udp_socket(ip, porta):
+def estabelece_conexao(ip, porta):
     udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     udp.bind((ip, porta))
     return udp
 
 
 def main(args):
+    udp = estabelece_conexao(args.ip, args.port)
+
     data = b''
     buffer_size = 65536
-    window = 'video streaming'
+    window = 'Transmissao de Video'
     out = None
-
-    udp = udp_socket(args.ip, args.port)
 
     if not args.save:
         cv2.namedWindow(window, cv2.WINDOW_NORMAL)
