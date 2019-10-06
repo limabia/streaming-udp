@@ -12,7 +12,7 @@ Execução da transmissão UDP de um determinado video.
   - `Ctrl+C` para finalizar a transmissão
   
 ## - Cliente: 
-  1. em transmissão execute: `$python3 client.py` 
+    1. em transmissão execute: `$python3 client.py` 
   - `--fps FPS`
   - `--gray` 
   - `--ip IP`
