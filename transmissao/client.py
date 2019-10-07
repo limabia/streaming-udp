@@ -6,75 +6,86 @@ import cv2
 import numpy as np
 
 
-def estabelece_conexao(args):
-    # conexao do cliente
-    address = (args.ip, args.port)
-    udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    return address, udp
+SERVER_ADDRESS = "localhost"  # Standard loopback interface address (localhost)
+SERVER_PORT = 65430        # SERVER TCP PORT TO CONNECT
 
+def get_video_writer(frame):
+    w, h = frame.shape[1], frame.shape[0]
+    is_color = True
+    try:
+        frame.shape[2]
+    except IndexError:
+        is_color = False
+    fourcc = cv2.VideoWriter_fourcc(*'MJPG')
+    vr = cv2.VideoWriter('video.avi', fourcc, 10, (w, h), is_color)
+    return vr
+
+def create_udp_socket(ip, porta):
+    udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    udp.bind((ip, porta))
+    return udp
 
 def main(args):
-    address, udp = estabelece_conexao(args)
 
-    video = cv2.VideoCapture('teste.mp4')  # TODO Enviar para o server o video escolhido dado a lista
-    video_fps = video.get(cv2.CAP_PROP_FPS)
-    desired_fps = args.fps
-    max_size = 65536 - 8  # less 8 bytes of video time
-    if desired_fps > video_fps:
-        desired_fps = video_fps
+    tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    tcp.connect((SERVER_ADDRESS,SERVER_PORT))
+    
+    port = int(args.port)
+
+    tcp.sendall(port.to_bytes((port.bit_length() + 7) // 8, 'big'))
+
+    udp = create_udp_socket(args.ip, args.port)
+
+    data = b''
+    buffer_size = 65536
+    window = 'Transmissao de Video'
+    out = None
+
+    if not args.save:
+        cv2.namedWindow(window, cv2.WINDOW_NORMAL)
+        cv2.resizeWindow(window, 600, 600)
 
     try:
-        transmission_start = time.time()
-        processing_start = time.time()
-        jpg_quality = 80
-        while video.isOpened():
-            ret, frame = video.read()
-            if not ret:
-                break
-
-            if args.gray:
-                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-
-            encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), jpg_quality]
-            result, encoded_img = cv2.imencode('.jpg', frame, encode_param)
-
-            while encoded_img.nbytes > max_size:
-                jpg_quality -= 5
-                encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), jpg_quality]
-                result, encoded_img = cv2.imencode('.jpg', frame, encode_param)
-
-            if not result:
-                break
-
-            vt = np.array([video.get(cv2.CAP_PROP_POS_MSEC) / 1000], dtype=np.float64)
-            data = encoded_img.tobytes() + vt.tobytes()
-
-            udp.sendto(data, address)
-
-            end = time.time()
-
-            processing_time = end - processing_start
-            desired_time = 1 / desired_fps
-            if desired_time > processing_time:
-                time.sleep(desired_time - processing_time)
-            processing_start = time.time()
+        start = time.time()
+        while True:
+            data += udp.recv(buffer_size)
+            a = data.find(b'\xff\xd8')
+            b = data.find(b'\xff\xd9')
+            if a != -1 and b != -1:
+                jpg = data[a:b + 2]
+                vt = data[b + 2: b + 2 + 8]
+                data = data[b + 2 + 8:]
+                # decode frame and video time
+                frame = cv2.imdecode(np.frombuffer(jpg, dtype=np.uint8), cv2.IMREAD_COLOR)
+                vt = np.frombuffer(vt, dtype=np.float64)[0]
+                if args.save:
+                    if out is None:
+                        out = get_video_writer(frame)
+                    out.write(frame)
+                else:
+                    cv2.imshow(window, frame)
+                    if cv2.waitKey(1) & 0xFF == ord('q'):
+                        break
+                end = time.time()
+                start = time.time()
 
     except KeyboardInterrupt:
-        video.release()
+        cv2.destroyAllWindows()
         udp.close()
+        if args.save:
+            out.release()
 
-    video.release()
+    cv2.destroyAllWindows()
     udp.close()
+    if args.save:
+        out.release()
 
 
 def arg_parse():
-    parser = argparse.ArgumentParser(description='Server')
-    parser.add_argument("--video", help="Path to video file", default=0)
-    parser.add_argument("--fps", help="Set video FPS", type=int, default=14)
-    parser.add_argument("--gray", help="Convert video into gray scale", action="store_true")
+    parser = argparse.ArgumentParser(description='Client')
+    parser.add_argument('--save', default=False, help='Save video', action='store_true')
     parser.add_argument("--ip", help="Client IP address", default="localhost")
-    parser.add_argument("--port", help="UDP port number", type=int, default=8080)
-
+    parser.add_argument("--port", help="Listening port number (UDP)", type=int)
     return parser.parse_args()
 
 
