@@ -55,18 +55,22 @@ def main(args):
 
     print("\nHere are the content available:")
     for idx,video in enumerate(videos):
-        print("[",idx,"] ",video)
+        print("[",idx+1,"] ",video)
 
     
     selected_video = int(input("Please select a video to play: "))
     tcp.sendall(selected_video.to_bytes((selected_video.bit_length() + 7) // 8, 'big'))
     
+
+    print("\n\nPlaying video...")
+
     port = int(args.port)
     tcp.sendall(port.to_bytes((port.bit_length() + 7) // 8, 'big'))
 
     udp = create_udp_socket(args.ip, args.port)
 
     data = b''
+    #buffer_size = 65536
     buffer_size = 65536
     window = 'Transmissao de Video'
     out = None

@@ -37,7 +37,7 @@ def on_new_client(tcp,udp,client_address_tcp,args):
     print("Waiting client to select video", client_address_tcp)
 
     selected_video_bytes = tcp.recv(BUFFER_SIZE) # server receive from client which port it should send the video data
-    selected_video = int.from_bytes(selected_video_bytes, 'big')
+    selected_video = int.from_bytes(selected_video_bytes, 'big') - 1
 
     print("Video selected: ",videos_available[selected_video], client_address_tcp)
 
@@ -116,7 +116,7 @@ def main(args):
 def arg_parse():
     parser = argparse.ArgumentParser(description='Server')
     parser.add_argument("--video", help="Path to video file", default=0)
-    parser.add_argument("--fps", help="Set video FPS", type=int, default=30)
+    parser.add_argument("--fps", help="Set video FPS", type=int, default=15)
     parser.add_argument("--gray", help="Convert video into gray scale", action="store_true")
     parser.add_argument("--port", help="Server TCP port number", type=int, default=65430)
     parser.add_argument("--ip", help="Server IP address", default="localhost")
