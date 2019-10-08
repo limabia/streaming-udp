@@ -1,6 +1,7 @@
 import argparse
 import socket
 import time
+import keyboard
 
 import cv2
 import numpy as np
@@ -25,11 +26,39 @@ def create_udp_socket(ip, porta):
     udp.bind((ip, porta))
     return udp
 
+def get_videos_list():
+    return 0
+
 def main(args):
 
     tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     tcp.connect((SERVER_ADDRESS,SERVER_PORT))
     
+
+    print("\n\nConnected to the server!!", (SERVER_ADDRESS,SERVER_PORT))
+
+    print("Getting available videos...")
+
+
+    videos_available_bytes = tcp.recv(1024) # server receive from client which port it should send the video data
+
+    videos_available = videos_available_bytes.decode("utf-8")
+    
+    videos = []
+    video = ""
+
+    for letter in videos_available:
+        if(letter == "\n"):
+            videos.append(video)
+            video = ""
+        else:
+            video += letter
+
+
+    print("\nPlease select a video to play:")
+    for idx,x in enumerate(videos):
+        print("[",idx,"] ",x)
+
     port = int(args.port)
 
     tcp.sendall(port.to_bytes((port.bit_length() + 7) // 8, 'big'))

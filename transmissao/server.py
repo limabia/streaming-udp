@@ -1,10 +1,14 @@
 import argparse
 import socket
 import time
+import _thread
+import keyboard
+from os import listdir
 
 import cv2
 import numpy as np
 
+VIDEOS_PATH = 'videos'  
 
 def create_udp_socket():
     return socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -15,79 +19,95 @@ def create_tcp_socket(args):
     s.listen()
     return s
 
+def on_new_client(tcp,udp,client_address_tcp,args):
+  
+    videos_available = listdir(VIDEOS_PATH)
 
-def main(args):
+    print("Sending available videos...", client_address_tcp)
+    print(videos_available)
 
-    tcp = create_tcp_socket(args)
+    videos_available_bytes = bytearray()
+    for video in videos_available:
+        #tcp.sendall(bytearray(video,"utf-8"))
+        videos_available_bytes.extend(bytearray(video,"utf-8"))
+        videos_available_bytes.extend(bytearray("\n","utf-8"))
 
-    conn, addr = tcp.accept()           #waits for client to connect
-    print('Connected by client', addr)
+    tcp.sendall(videos_available_bytes)
 
-    data = conn.recv(1024) # server receive from client which port it should send the video data
+    data = tcp.recv(1024) # server receive from client which port it should send the video data
     port = int.from_bytes(data, 'big')
-    clientAddress = (("localhost", port)) #create clientAddress
+    client_address_udp = ((client_address_tcp[0], port)) #create clientAddress
 
-
-
-    udp = create_udp_socket()
-
-    video = cv2.VideoCapture('teste.mp4')  # TODO Enviar para o cliente o video escolhido dado a lista
+    video = cv2.VideoCapture('videos/teste.mp4')  # TODO Enviar para o cliente o video escolhido dado a lista
     video_fps = video.get(cv2.CAP_PROP_FPS)
     desired_fps = args.fps
     max_size = 65536 - 8  # less 8 bytes of video time
     if desired_fps > video_fps:
         desired_fps = video_fps
 
-    try:
-        transmission_start = time.time()
-        processing_start = time.time()
-        jpg_quality = 80
-        
-        print('Transmission started')
-        while video.isOpened():
-            ret, frame = video.read()
-            if not ret:
-                break
 
-            if args.gray:
-                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    transmission_start = time.time()
+    processing_start = time.time()
+    jpg_quality = 80
+    
+    print('Transmission started')
+    while video.isOpened():
+        ret, frame = video.read()
+        if not ret:
+            break
 
+        if args.gray:
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+        encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), jpg_quality]
+        result, encoded_img = cv2.imencode('.jpg', frame, encode_param)
+
+        while encoded_img.nbytes > max_size:
+            jpg_quality -= 5
             encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), jpg_quality]
             result, encoded_img = cv2.imencode('.jpg', frame, encode_param)
 
-            while encoded_img.nbytes > max_size:
-                jpg_quality -= 5
-                encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), jpg_quality]
-                result, encoded_img = cv2.imencode('.jpg', frame, encode_param)
+        if not result:
+            break
 
-            if not result:
-                break
+        vt = np.array([video.get(cv2.CAP_PROP_POS_MSEC) / 1000], dtype=np.float64)
+        data = encoded_img.tobytes() + vt.tobytes()
 
-            vt = np.array([video.get(cv2.CAP_PROP_POS_MSEC) / 1000], dtype=np.float64)
-            data = encoded_img.tobytes() + vt.tobytes()
+        udp.sendto(data, client_address_udp)
 
-            udp.sendto(data, clientAddress)
+        end = time.time()
 
-            end = time.time()
-
-            processing_time = end - processing_start
-            desired_time = 1 / desired_fps
-            if desired_time > processing_time:
-                time.sleep(desired_time - processing_time)
-            processing_start = time.time()
-
-    except KeyboardInterrupt:
-        video.release()
-        udp.close()
+        processing_time = end - processing_start
+        desired_time = 1 / desired_fps
+        if desired_time > processing_time:
+            time.sleep(desired_time - processing_time)
+        processing_start = time.time()
 
     video.release()
+    tcp.close()
     udp.close()
+
+def main(args):
+
+
+    tcp = create_tcp_socket(args)
+    udp = create_udp_socket()
+
+    print('\nServer started!')
+    print('Waiting for clients...')
+
+    while True:
+        conn, client_address_tcp = tcp.accept()           #waits for client to connect
+        print('\nConnected by client', client_address_tcp)
+        _thread.start_new_thread(on_new_client,(conn,udp,client_address_tcp,args))
+    tcp.close()
+    s.close()
 
 
 def arg_parse():
     parser = argparse.ArgumentParser(description='Server')
     parser.add_argument("--video", help="Path to video file", default=0)
-    parser.add_argument("--fps", help="Set video FPS", type=int, default=14)
+    parser.add_argument("--fps", help="Set video FPS", type=int, default=30)
     parser.add_argument("--gray", help="Convert video into gray scale", action="store_true")
     parser.add_argument("--port", help="Server TCP port number", type=int, default=65430)
     parser.add_argument("--ip", help="Server IP address", default="localhost")
@@ -98,4 +118,13 @@ def arg_parse():
 if __name__ == '__main__':
     arguments = arg_parse()
     print(arguments)
-    main(arguments)
+
+    _thread.start_new_thread(main,(arguments,))
+
+    while True:
+        try:
+            if keyboard.is_pressed('Esc'):
+                print("\nServer is shutting down...")
+                sys.exit(0)
+        except:
+            break
