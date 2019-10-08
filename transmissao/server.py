@@ -9,6 +9,7 @@ import cv2
 import numpy as np
 
 VIDEOS_PATH = 'videos'  
+BUFFER_SIZE = 1024
 
 def create_udp_socket():
     return socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -24,7 +25,6 @@ def on_new_client(tcp,udp,client_address_tcp,args):
     videos_available = listdir(VIDEOS_PATH)
 
     print("Sending available videos...", client_address_tcp)
-    print(videos_available)
 
     videos_available_bytes = bytearray()
     for video in videos_available:
@@ -33,12 +33,21 @@ def on_new_client(tcp,udp,client_address_tcp,args):
         videos_available_bytes.extend(bytearray("\n","utf-8"))
 
     tcp.sendall(videos_available_bytes)
+    
+    print("Waiting client to select video", client_address_tcp)
 
-    data = tcp.recv(1024) # server receive from client which port it should send the video data
-    port = int.from_bytes(data, 'big')
+    selected_video_bytes = tcp.recv(BUFFER_SIZE) # server receive from client which port it should send the video data
+    selected_video = int.from_bytes(selected_video_bytes, 'big')
+
+    print("Video selected: ",videos_available[selected_video], client_address_tcp)
+
+    path = 'videos/' + videos_available[selected_video]
+
+    port_bytes = tcp.recv(BUFFER_SIZE) # server receive from client which port it should send the video data
+    port = int.from_bytes(port_bytes, 'big')
     client_address_udp = ((client_address_tcp[0], port)) #create clientAddress
 
-    video = cv2.VideoCapture('videos/teste.mp4')  # TODO Enviar para o cliente o video escolhido dado a lista
+    video = cv2.VideoCapture(path)  # TODO Enviar para o cliente o video escolhido dado a lista
     video_fps = video.get(cv2.CAP_PROP_FPS)
     desired_fps = args.fps
     max_size = 65536 - 8  # less 8 bytes of video time

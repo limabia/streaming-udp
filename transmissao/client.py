@@ -26,8 +26,18 @@ def create_udp_socket(ip, porta):
     udp.bind((ip, porta))
     return udp
 
-def get_videos_list():
-    return 0
+def get_videos_list(videos_available_bytes):
+    videos_available = videos_available_bytes.decode("utf-8")    
+    videos = []
+    video = ""
+
+    for letter in videos_available:
+        if(letter == "\n"):
+            videos.append(video)
+            video = ""
+        else:
+            video += letter
+    return videos
 
 def main(args):
 
@@ -39,28 +49,19 @@ def main(args):
 
     print("Getting available videos...")
 
-
     videos_available_bytes = tcp.recv(1024) # server receive from client which port it should send the video data
 
-    videos_available = videos_available_bytes.decode("utf-8")
+    videos = get_videos_list(videos_available_bytes)
+
+    print("\nHere are the content available:")
+    for idx,video in enumerate(videos):
+        print("[",idx,"] ",video)
+
     
-    videos = []
-    video = ""
-
-    for letter in videos_available:
-        if(letter == "\n"):
-            videos.append(video)
-            video = ""
-        else:
-            video += letter
-
-
-    print("\nPlease select a video to play:")
-    for idx,x in enumerate(videos):
-        print("[",idx,"] ",x)
-
+    selected_video = int(input("Please select a video to play: "))
+    tcp.sendall(selected_video.to_bytes((selected_video.bit_length() + 7) // 8, 'big'))
+    
     port = int(args.port)
-
     tcp.sendall(port.to_bytes((port.bit_length() + 7) // 8, 'big'))
 
     udp = create_udp_socket(args.ip, args.port)
