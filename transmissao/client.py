@@ -44,7 +44,7 @@ def get_videos_list(videos_available_bytes):
 
 def video_choice(tcp):
     print("\n\nPegando vídeos disponiveis...")
-    videos_available_bytes = tcp.recv(1024)  # server receive from client which port it should send the video data
+    videos_available_bytes = tcp.recv(1024)  # TODO explicar essa linha
     videos = get_videos_list(videos_available_bytes)
     print("\n\nAqui estao os videos disponiveis:")
     for idx, video in enumerate(videos):
