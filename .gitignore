@@ -7,3 +7,4 @@ env/
 .pydevproject
 *.log
 /lib/
+.vscode

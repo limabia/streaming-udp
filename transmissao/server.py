@@ -1,12 +1,11 @@
 import argparse
 import socket
-import time
-import _thread
-import keyboard
+import threading
 from os import listdir
 
 import cv2
 import numpy as np
+import time
 
 VIDEOS_PATH = 'videos'
 BUFFER_SIZE = 1024
@@ -108,7 +107,7 @@ def main(args):
     while True:
         conn, client_address_tcp = tcp.accept()  # waits for client to connect
         print('\nConnected by client', client_address_tcp)
-        _thread.start_new_thread(on_new_client, (conn, udp, client_address_tcp, args))
+        threading.Thread(target=on_new_client, args=(conn, udp, client_address_tcp, args)).start()
     tcp.close()
     s.close()
 
@@ -128,12 +127,8 @@ if __name__ == '__main__':
     arguments = arg_parse()
     print(arguments)
 
-    _thread.start_new_thread(main, (arguments,))
+    t = threading.Thread(target=main, args=(arguments,), daemon=True)
+    t.start()
 
-    while True:
-        try:
-            if keyboard.is_pressed('Esc'):
-                print("\nServer is shutting down...")
-                sys.exit(0)
-        except:
-            break
+    while (t.is_alive()):
+        t.join(.5)
