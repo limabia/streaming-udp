@@ -8,11 +8,13 @@ from os import listdir
 import cv2
 import numpy as np
 
-VIDEOS_PATH = 'videos'  
+VIDEOS_PATH = 'videos'
 BUFFER_SIZE = 1024
+
 
 def create_udp_socket():
     return socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
 
 def create_tcp_socket(args):
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -20,32 +22,32 @@ def create_tcp_socket(args):
     s.listen()
     return s
 
-def on_new_client(tcp,udp,client_address_tcp,args):
-  
+
+def on_new_client(tcp, udp, client_address_tcp, args):
     videos_available = listdir(VIDEOS_PATH)
 
     print("Sending available videos...", client_address_tcp)
 
     videos_available_bytes = bytearray()
     for video in videos_available:
-        #tcp.sendall(bytearray(video,"utf-8"))
-        videos_available_bytes.extend(bytearray(video,"utf-8"))
-        videos_available_bytes.extend(bytearray("\n","utf-8"))
+        # tcp.sendall(bytearray(video,"utf-8"))
+        videos_available_bytes.extend(bytearray(video, "utf-8"))
+        videos_available_bytes.extend(bytearray("\n", "utf-8"))
 
     tcp.sendall(videos_available_bytes)
-    
+
     print("Waiting client to select video", client_address_tcp)
 
-    selected_video_bytes = tcp.recv(BUFFER_SIZE) # server receive from client which port it should send the video data
+    selected_video_bytes = tcp.recv(BUFFER_SIZE)  # server receive from client which port it should send the video data
     selected_video = int.from_bytes(selected_video_bytes, 'big') - 1
 
-    print("Video selected: ",videos_available[selected_video], client_address_tcp)
+    print("Video selected: ", videos_available[selected_video], client_address_tcp)
 
     path = 'videos/' + videos_available[selected_video]
 
-    port_bytes = tcp.recv(BUFFER_SIZE) # server receive from client which port it should send the video data
+    port_bytes = tcp.recv(BUFFER_SIZE)  # server receive from client which port it should send the video data
     port = int.from_bytes(port_bytes, 'big')
-    client_address_udp = ((client_address_tcp[0], port)) #create clientAddress
+    client_address_udp = ((client_address_tcp[0], port))  # create clientAddress
 
     video = cv2.VideoCapture(path)  # TODO Enviar para o cliente o video escolhido dado a lista
     video_fps = video.get(cv2.CAP_PROP_FPS)
@@ -54,11 +56,10 @@ def on_new_client(tcp,udp,client_address_tcp,args):
     if desired_fps > video_fps:
         desired_fps = video_fps
 
-
     transmission_start = time.time()
     processing_start = time.time()
     jpg_quality = 80
-    
+
     print('Transmission started')
     while video.isOpened():
         ret, frame = video.read()
@@ -96,9 +97,8 @@ def on_new_client(tcp,udp,client_address_tcp,args):
     tcp.close()
     udp.close()
 
+
 def main(args):
-
-
     tcp = create_tcp_socket(args)
     udp = create_udp_socket()
 
@@ -106,9 +106,9 @@ def main(args):
     print('Waiting for clients...')
 
     while True:
-        conn, client_address_tcp = tcp.accept()           #waits for client to connect
+        conn, client_address_tcp = tcp.accept()  # waits for client to connect
         print('\nConnected by client', client_address_tcp)
-        _thread.start_new_thread(on_new_client,(conn,udp,client_address_tcp,args))
+        _thread.start_new_thread(on_new_client, (conn, udp, client_address_tcp, args))
     tcp.close()
     s.close()
 
@@ -128,7 +128,7 @@ if __name__ == '__main__':
     arguments = arg_parse()
     print(arguments)
 
-    _thread.start_new_thread(main,(arguments,))
+    _thread.start_new_thread(main, (arguments,))
 
     while True:
         try:
