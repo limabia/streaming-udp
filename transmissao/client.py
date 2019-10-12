@@ -34,7 +34,7 @@ def get_videos_list(videos_available_bytes):
     video = ""
 
     for letter in videos_available:
-        if (letter == "\n"):
+        if letter == "\n":
             videos.append(video)
             video = ""
         else:
@@ -42,26 +42,28 @@ def get_videos_list(videos_available_bytes):
     return videos
 
 
+def video_choice(tcp):
+    print("\n\nPegando vídeos disponiveis...")
+    videos_available_bytes = tcp.recv(1024)  # server receive from client which port it should send the video data
+    videos = get_videos_list(videos_available_bytes)
+    print("\n\nAqui estao os videos disponiveis:")
+    for idx, video in enumerate(videos):
+        print("[", idx + 1, "] ", video)
+    selected_video = int(input("Escolha o video que voce deseja ver: "))
+    return selected_video
+
+
 def main(args):
     tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     tcp.connect((SERVER_ADDRESS, SERVER_PORT))
 
-    print("\n\nConnected to the server!!", (SERVER_ADDRESS, SERVER_PORT))
+    print("\n\n Ola, você esta conectado ao servidor, seja bem vindo!!! =) ", (SERVER_ADDRESS, SERVER_PORT))
 
-    print("Getting available videos...")
+    selected_video = video_choice(tcp)
 
-    videos_available_bytes = tcp.recv(1024)  # server receive from client which port it should send the video data
-
-    videos = get_videos_list(videos_available_bytes)
-
-    print("\nHere are the content available:")
-    for idx, video in enumerate(videos):
-        print("[", idx + 1, "] ", video)
-
-    selected_video = int(input("Please select a video to play: "))
     tcp.sendall(selected_video.to_bytes((selected_video.bit_length() + 7) // 8, 'big'))
 
-    print("\n\nPlaying video...")
+    print("\n\nReproduzindo video...")
 
     port = int(args.port)
     tcp.sendall(port.to_bytes((port.bit_length() + 7) // 8, 'big'))
@@ -69,7 +71,6 @@ def main(args):
     udp = create_udp_socket(args.ip, args.port)
 
     data = b''
-    # buffer_size = 65536
     buffer_size = 65536
     window = 'Transmissao de Video'
     out = None
@@ -116,9 +117,9 @@ def main(args):
 
 def arg_parse():
     parser = argparse.ArgumentParser(description='Client')
-    parser.add_argument('--save', default=False, help='Save video', action='store_true')
-    parser.add_argument("--ip", help="Client IP address", default="localhost")
-    parser.add_argument("--port", help="Listening port number (UDP)", type=int)
+    parser.add_argument('--save', default=False, help='Salvar o video', action='store_true')
+    parser.add_argument("--ip", help="Endereço IP do cliente", default="localhost")
+    parser.add_argument("--port", help="Numero da porta de escuta (UDP)", type=int, default=8080)
     return parser.parse_args()
 
 

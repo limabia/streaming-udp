@@ -7,42 +7,51 @@ import cv2
 import numpy as np
 import time
 
-VIDEOS_PATH = 'videos'
+VIDEOS_PATH = 'videos' # pasta onde os videos estao
 BUFFER_SIZE = 1024
 
 
 def create_udp_socket():
+    """ cria conexao udp """
     return socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 
 def create_tcp_socket(args):
+    """ cria conexao tcp """
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.bind((args.ip, args.port))
     s.listen()
     return s
 
 
-def on_new_client(tcp, udp, client_address_tcp, args):
+def videos_list(client_address_tcp):
+    """ constroi a lista de videos para enviar ao cliente """
     videos_available = listdir(VIDEOS_PATH)
 
-    print("Sending available videos...", client_address_tcp)
+    print("Enviando videos disponiveis...", client_address_tcp)
 
     videos_available_bytes = bytearray()
     for video in videos_available:
-        # tcp.sendall(bytearray(video,"utf-8"))
         videos_available_bytes.extend(bytearray(video, "utf-8"))
         videos_available_bytes.extend(bytearray("\n", "utf-8"))
 
-    tcp.sendall(videos_available_bytes)
+    return videos_available, videos_available_bytes
 
-    print("Waiting client to select video", client_address_tcp)
 
-    selected_video_bytes = tcp.recv(BUFFER_SIZE)  # server receive from client which port it should send the video data
-    selected_video = int.from_bytes(selected_video_bytes, 'big') - 1
+def on_new_client(tcp, udp, client_address_tcp, args):
+    """ """
 
-    print("Video selected: ", videos_available[selected_video], client_address_tcp)
+    videos_available, videos_available_bytes = videos_list(client_address_tcp)
+    tcp.sendall(videos_available_bytes)  # envia a lista de videos para o cliente
 
-    path = 'videos/' + videos_available[selected_video]
+    print("Esperando clientes para selecionar video", client_address_tcp)
+
+    selected_video_bytes = tcp.recv(BUFFER_SIZE)  # servidor recebe do cliente qual porta deve enviar os dados de vídeo
+    selected_video = int.from_bytes(selected_video_bytes, 'big') - 1  # TODO explicar essa linha
+
+    print("Video selecionado: ", videos_available[selected_video], client_address_tcp)
+
+    path = VIDEOS_PATH + '/' + videos_available[selected_video]  # encontra o video na pasta de video definida
 
     port_bytes = tcp.recv(BUFFER_SIZE)  # server receive from client which port it should send the video data
     port = int.from_bytes(port_bytes, 'big')
@@ -59,7 +68,7 @@ def on_new_client(tcp, udp, client_address_tcp, args):
     processing_start = time.time()
     jpg_quality = 80
 
-    print('Transmission started')
+    print('Transmissao inciada para cliente: x') # TODO descriminar o cliente aqui
     while video.isOpened():
         ret, frame = video.read()
         if not ret:
@@ -115,8 +124,8 @@ def main(args):
 def arg_parse():
     parser = argparse.ArgumentParser(description='Server')
     parser.add_argument("--video", help="Path to video file", default=0)
-    parser.add_argument("--fps", help="Set video FPS", type=int, default=15)
-    parser.add_argument("--gray", help="Convert video into gray scale", action="store_true")
+    parser.add_argument("--fps", help="Set video FPS", type=int, default=15)  # TODO tem que vir do server
+    parser.add_argument("--gray", help="Convert video into gray scale", action="store_true")  # TODO tem que vir do server
     parser.add_argument("--port", help="Server TCP port number", type=int, default=65430)
     parser.add_argument("--ip", help="Server IP address", default="localhost")
 
@@ -130,5 +139,5 @@ if __name__ == '__main__':
     t = threading.Thread(target=main, args=(arguments,), daemon=True)
     t.start()
 
-    while (t.is_alive()):
+    while t.is_alive():
         t.join(.5)
