@@ -7,8 +7,12 @@ import cv2
 import numpy as np
 import time
 
+SERVER_ADDRESS_TCP = "localhost"  # endereco IP padrao
+SERVER_PORT_TCP = 65430  # porta padrao para conexao TCP
 VIDEOS_PATH = 'videos'  # pasta padrao para os videos
 BUFFER_SIZE = 1024  # tamanho padrao de buffer
+FPS = 15  # numero de frames por segundo padrao
+VIDEO_TIME = 65536  # TODO qual funcao disso
 
 
 def create_udp_socket():
@@ -40,35 +44,32 @@ def videos_list(client_address_tcp):
 
 
 def on_new_client(tcp, udp, client_address_tcp, args):
-    """ estabelece a conexao TCP (listener), recebe cliente e abre conexao UDP para transmissao do video escolhido """
-
+    """ para cada cliente: estabelece a conexao TCP (listener), recebe cliente e abre conexao UDP para transmissao
+    do video escolhido """
     videos_available, videos_available_bytes = videos_list(client_address_tcp)
     tcp.sendall(videos_available_bytes)  # envia a lista de videos para o cliente
 
-    print("Esperando clientes para selecionar video", client_address_tcp)
+    print("\n\nEsperando selecionar video. Cliente: ", client_address_tcp)
 
     selected_video_bytes = tcp.recv(BUFFER_SIZE)  # servidor recebe do cliente qual porta deve enviar os dados de vídeo
     selected_video = int.from_bytes(selected_video_bytes, 'big') - 1  # TODO explicar essa linha
 
-    print("Video selecionado: ", videos_available[selected_video], client_address_tcp)
-
-    path = VIDEOS_PATH + '/' + videos_available[selected_video]  # encontra o video na pasta de video definida
+    print("\n\nVideo selecionado: ", videos_available[selected_video], " por cliente: ", client_address_tcp)
 
     port_bytes = tcp.recv(BUFFER_SIZE)  # o recv precisa de buffer pra transmissão de dados
-    port = int.from_bytes(port_bytes, 'big') # servidor recebe do cliente qual porta deve enviar os dados de vídeo
+    port = int.from_bytes(port_bytes, 'big')  # servidor recebe do cliente qual porta deve enviar os dados de vídeo
     client_address_udp = (client_address_tcp[0], port)  # cria clientAddress
 
+    path = VIDEOS_PATH + '/' + videos_available[selected_video]  # encontra o video na pasta de video definida
     video = cv2.VideoCapture(path)
     video_fps = video.get(cv2.CAP_PROP_FPS)
     desired_fps = args.fps
-    max_size = 65536 - 8  # less 8 bytes of video time
-    if desired_fps > video_fps:
-        desired_fps = video_fps
+    max_size = VIDEO_TIME - 8  # less 8 bytes of video time
 
     processing_start = time.time()
     jpg_quality = 80
 
-    print('Transmissao inciada para cliente')
+    print('\n\nTransmissao inciada para cliente: ', client_address_tcp)
 
     while video.isOpened():
         ret, frame = video.read()
@@ -106,33 +107,34 @@ def on_new_client(tcp, udp, client_address_tcp, args):
 
 
 def main(args):
+    """ cria a conexao tcp e a conexao udp  """
     tcp = create_tcp_socket(args)
     udp = create_udp_socket()
 
-    print('\nServer started!')
-    print('Waiting for clients...')
+    print('\nServidor iniciado! Esperando por clientes...')
 
     while True:
-        conn, client_address_tcp = tcp.accept()  # waits for client to connect
-        print('\nConnected by client', client_address_tcp)
+        """ espera o(s) cliente(s) conectarem"""
+        conn, client_address_tcp = tcp.accept()
+        print('\nConectado com o cliente: ', client_address_tcp)
         threading.Thread(target=on_new_client, args=(conn, udp, client_address_tcp, args)).start()
-    tcp.close()
-    s.close()
 
 
 def arg_parse():
+    """ analisa e separa os argumentos passados ao iniciar a execucao do server """
     parser = argparse.ArgumentParser(description='Server')
-    parser.add_argument("--video", help="Path to video file", default=VIDEOS_PATH)  #
-    parser.add_argument("--fps", help="Set video FPS", type=int, default=15)  # Velocidade de transmissao do video
-    parser.add_argument("--port", help="Server TCP port number", type=int, default=65430)
-    parser.add_argument("--ip", help="Server IP address", default="localhost")
+    parser.add_argument("--video", help="Raiz de arquivos utilizada", default=VIDEOS_PATH)
+    parser.add_argument("--fps", help="Definicao de frames por segundo para a transmissao", type=int, default=FPS)
+    parser.add_argument("--port", help="Numero da porta TCP do servidor", type=int, default=SERVER_PORT_TCP)
+    parser.add_argument("--ip", help="Endereco IP do servidor", default=SERVER_ADDRESS_TCP)
 
     return parser.parse_args()
 
 
 if __name__ == '__main__':
+    """ recebe os argumentos e inicia uma thread com os argumentos passados na inicializacao do servidor """
     arguments = arg_parse()
-    print(arguments)
+    print("Server.py iniciando a execucao. Argumentos recebidos: ", arguments)
 
     t = threading.Thread(target=main, args=(arguments,), daemon=True)
     t.start()
