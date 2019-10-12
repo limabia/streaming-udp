@@ -22,9 +22,9 @@ def get_video_writer(frame):
     return vr
 
 
-def create_udp_socket(ip, porta):
+def create_udp_socket(ip, port):
     udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    udp.bind((ip, porta))
+    udp.bind((ip, port))
     return udp
 
 
@@ -49,7 +49,7 @@ def video_choice(tcp):
     print("\n\nAqui estao os videos disponiveis:")
     for idx, video in enumerate(videos):
         print("[", idx + 1, "] ", video)
-    selected_video = int(input("Escolha o video que voce deseja ver: "))
+    selected_video = int(input("\n\nEscolha o video que voce deseja ver e digite o numero correspondente: "))
     return selected_video
 
 
@@ -57,13 +57,15 @@ def main(args):
     tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     tcp.connect((SERVER_ADDRESS, SERVER_PORT))
 
-    print("\n\n Ola, você esta conectado ao servidor, seja bem vindo!!! =) ", (SERVER_ADDRESS, SERVER_PORT))
+    print("\n\n Ola, você esta conectado ao servidor, seja bem vindo!!! =) ")
 
     selected_video = video_choice(tcp)
 
     tcp.sendall(selected_video.to_bytes((selected_video.bit_length() + 7) // 8, 'big'))
 
     print("\n\nReproduzindo video...")
+
+    print('args:', args)
 
     port = int(args.port)
     tcp.sendall(port.to_bytes((port.bit_length() + 7) // 8, 'big'))
@@ -89,9 +91,16 @@ def main(args):
                 jpg = data[a:b + 2]
                 vt = data[b + 2: b + 2 + 8]
                 data = data[b + 2 + 8:]
+
                 # decode frame and video time
                 frame = cv2.imdecode(np.frombuffer(jpg, dtype=np.uint8), cv2.IMREAD_COLOR)
                 vt = np.frombuffer(vt, dtype=np.float64)[0]
+
+                # escala de cinza para video em preto e branco
+                if args.gray:
+                    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+                # salva o video no cliente caso ele tenha escolhido salvar
                 if args.save:
                     if out is None:
                         out = get_video_writer(frame)
@@ -100,6 +109,7 @@ def main(args):
                     cv2.imshow(window, frame)
                     if cv2.waitKey(1) & 0xFF == ord('q'):
                         break
+
                 end = time.time()
                 start = time.time()
 
@@ -120,6 +130,7 @@ def arg_parse():
     parser.add_argument('--save', default=False, help='Salvar o video', action='store_true')
     parser.add_argument("--ip", help="Endereço IP do cliente", default="localhost")
     parser.add_argument("--port", help="Numero da porta de escuta (UDP)", type=int, default=8080)
+    parser.add_argument("--gray", help="Converte video para escala de cinza", action="store_true")
     return parser.parse_args()
 
 

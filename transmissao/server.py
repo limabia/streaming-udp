@@ -7,8 +7,8 @@ import cv2
 import numpy as np
 import time
 
-VIDEOS_PATH = 'videos' # pasta onde os videos estao
-BUFFER_SIZE = 1024
+VIDEOS_PATH = 'videos'  # pasta padrao para os videos
+BUFFER_SIZE = 1024  # tamanho padrao de buffer
 
 
 def create_udp_socket():
@@ -18,6 +18,7 @@ def create_udp_socket():
 
 def create_tcp_socket(args):
     """ cria conexao tcp """
+    print(args)
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.bind((args.ip, args.port))
     s.listen()
@@ -39,7 +40,7 @@ def videos_list(client_address_tcp):
 
 
 def on_new_client(tcp, udp, client_address_tcp, args):
-    """ """
+    """ estabelece a conexao TCP (listener), recebe cliente e abre conexao UDP para transmissao do video escolhido """
 
     videos_available, videos_available_bytes = videos_list(client_address_tcp)
     tcp.sendall(videos_available_bytes)  # envia a lista de videos para o cliente
@@ -53,9 +54,9 @@ def on_new_client(tcp, udp, client_address_tcp, args):
 
     path = VIDEOS_PATH + '/' + videos_available[selected_video]  # encontra o video na pasta de video definida
 
-    port_bytes = tcp.recv(BUFFER_SIZE)  # servidor recebe do cliente qual porta deve enviar os dados de vídeo
-    port = int.from_bytes(port_bytes, 'big')
-    client_address_udp = (client_address_tcp[0], port)  # create clientAddress
+    port_bytes = tcp.recv(BUFFER_SIZE)  # o recv precisa de buffer pra transmissão de dados
+    port = int.from_bytes(port_bytes, 'big') # servidor recebe do cliente qual porta deve enviar os dados de vídeo
+    client_address_udp = (client_address_tcp[0], port)  # cria clientAddress
 
     video = cv2.VideoCapture(path)
     video_fps = video.get(cv2.CAP_PROP_FPS)
@@ -64,18 +65,15 @@ def on_new_client(tcp, udp, client_address_tcp, args):
     if desired_fps > video_fps:
         desired_fps = video_fps
 
-    transmission_start = time.time()
     processing_start = time.time()
     jpg_quality = 80
 
-    print('Transmissao inciada para cliente: x') # TODO descriminar o cliente aqui
+    print('Transmissao inciada para cliente')
+
     while video.isOpened():
         ret, frame = video.read()
         if not ret:
             break
-
-        if args.gray:
-            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
         encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), jpg_quality]
         result, encoded_img = cv2.imencode('.jpg', frame, encode_param)
@@ -102,6 +100,7 @@ def on_new_client(tcp, udp, client_address_tcp, args):
         processing_start = time.time()
 
     video.release()
+
     tcp.close()
     udp.close()
 
@@ -123,9 +122,8 @@ def main(args):
 
 def arg_parse():
     parser = argparse.ArgumentParser(description='Server')
-    parser.add_argument("--video", help="Path to video file", default=0)
-    parser.add_argument("--fps", help="Set video FPS", type=int, default=15)  # TODO tem que vir do server
-    parser.add_argument("--gray", help="Convert video into gray scale", action="store_true")  # TODO tem que vir do server
+    parser.add_argument("--video", help="Path to video file", default=VIDEOS_PATH)  #
+    parser.add_argument("--fps", help="Set video FPS", type=int, default=15)  # Velocidade de transmissao do video
     parser.add_argument("--port", help="Server TCP port number", type=int, default=65430)
     parser.add_argument("--ip", help="Server IP address", default="localhost")
 
