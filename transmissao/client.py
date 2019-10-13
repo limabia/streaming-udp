@@ -10,6 +10,7 @@ SERVER_ADDRESS_TCP = "localhost"  # endereco IP padrao
 SERVER_PORT_TCP = 65430  # porta padrao para conexao TCP
 BUFFER_SIZE = 1024  # tamanho padrao de buffer
 VIDEO_TIME = 65536  # TODO qual funcao disso
+VIDEO_TIMEOUT = 2 # tempo de timeout sem receber dados de video do server
 
 
 def get_video_writer(frame):
@@ -99,6 +100,7 @@ def main(args):
     tcp.sendall(port.to_bytes((port.bit_length() + 7) // 8, 'big'))
 
     udp = create_udp_socket(args.ip, args.port)
+    udp.settimeout(VIDEO_TIMEOUT)
 
     window = 'Transmissao de Video'
     if not args.save:
@@ -111,52 +113,40 @@ def main(args):
     out = None
 
     try:
-        start = time.time()
-
         # TODO refatorar para rodar so enqt tiver video - fechar a janela e dar print que o video acabou
         while True:
             data += udp.recv(buffer_size)
-            if not data:
-                break
-
             a = data.find(b'\xff\xd8')
             b = data.find(b'\xff\xd9')
-            if a != -1 and b != -1:  # TODO explicar essa linha
-                jpg = data[a:b + 2]
-                vt = data[b + 2: b + 2 + 8]
-                data = data[b + 2 + 8:]
+            if a == -1 or b == -1:
+                break
 
-                # decode frame e tempo do video
-                frame = cv2.imdecode(np.frombuffer(jpg, dtype=np.uint8), cv2.IMREAD_COLOR)
-                vt = np.frombuffer(vt, dtype=np.float64)[0]
+            jpg = data[a:b + 2]
+            vt = data[b + 2: b + 2 + 8]
+            data = data[b + 2 + 8:]
 
-                # escala de cinza para video em preto e branco
-                if args.gray:
-                    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            # decode frame e tempo do video
+            frame = cv2.imdecode(np.frombuffer(jpg, dtype=np.uint8), cv2.IMREAD_COLOR)
+            vt = np.frombuffer(vt, dtype=np.float64)[0]
 
-                # salva o video no cliente
-                if args.save:
-                    if out is None:
-                        out = get_video_writer(frame)
-                    out.write(frame)
-                else:
-                    cv2.imshow(window, frame)
-                    if cv2.waitKey(1) & 0xFF == ord('q'):
-                        break
+            # escala de cinza para video em preto e branco
+            if args.gray:
+                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-                end = time.time()
-                start = time.time()
-
-    except KeyboardInterrupt:
+            # salva o video no cliente
+            if args.save:
+                if out is None:
+                    out = get_video_writer(frame)
+                out.write(frame)
+            else:
+                cv2.imshow(window, frame)
+                if cv2.waitKey(1) & 0xFF == ord('q'):
+                    break
+    finally:
         cv2.destroyAllWindows()
         udp.close()
         if args.save:
             out.release()
-
-    cv2.destroyAllWindows()
-    udp.close()
-    if args.save:
-        out.release()
 
 
 def arg_parse():
