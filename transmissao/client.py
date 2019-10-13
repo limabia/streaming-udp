@@ -128,6 +128,10 @@ def main(args):
             frame = cv2.imdecode(np.frombuffer(jpg, dtype=np.uint8), cv2.IMREAD_COLOR)
             vt = np.frombuffer(vt, dtype=np.float64)[0]
 
+            # escreve na imagem
+            if args.show_time:
+                frame = write_frame_time(frame, vt)
+
             # escala de cinza para video em preto e branco
             if args.gray:
                 frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -148,6 +152,14 @@ def main(args):
             out.release()
 
 
+def write_frame_time(frame, vt):
+    height, width, channels = frame.shape
+    frame = cv2.putText(
+        frame, '%.2f' % vt, (10, height - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255)
+    )
+    return frame
+
+
 def arg_parse():
     """ analisa e separa os argumentos passados ao iniciar a execucao do cliente """
     parser = argparse.ArgumentParser(description='Client')
@@ -155,6 +167,7 @@ def arg_parse():
     parser.add_argument("--ip", help="Endereço IP do cliente", default="localhost")
     parser.add_argument("--port", help="Numero da porta de escuta (UDP)", type=int, default=SERVER_PORT_UDP)
     parser.add_argument("--gray", help="Converte video para escala de cinza", action="store_true")
+    parser.add_argument("--show-time", help="Mostra o tempo de vídeo", action="store_true")
 
     return parser.parse_args()
 

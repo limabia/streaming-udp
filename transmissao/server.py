@@ -12,7 +12,9 @@ SERVER_PORT_TCP = 65430  # porta padrao para conexao TCP
 VIDEOS_PATH = 'videos'  # pasta padrao para os videos
 BUFFER_SIZE = 1024  # tamanho padrao de buffer
 FPS = 15  # numero de frames por segundo padrao
-VIDEO_TIME = 65536  # TODO qual funcao disso
+MAX_PACKET_SIZE = 65536  # Tamanho máximo do pacote (em bytes)
+# Tamanho maximo do frame (em bytes)
+MAX_FRAME_SIZE = MAX_PACKET_SIZE - 8  # tamanho do pacote menos 8 bytes de tempo do vídeo
 
 
 def create_udp_socket():
@@ -66,7 +68,6 @@ def on_new_client(tcp, client_address_tcp, args):
     path = VIDEOS_PATH + '/' + videos_available[selected_video]  # encontra o video na pasta de video definida
     video = cv2.VideoCapture(path)
     desired_fps = args.fps
-    max_size = VIDEO_TIME - 8  # less 8 bytes of video time
 
     processing_start = time.time()
     jpg_quality = 80
@@ -78,13 +79,12 @@ def on_new_client(tcp, client_address_tcp, args):
         if not ret:
             break
 
-        encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), jpg_quality]
-        result, encoded_img = cv2.imencode('.jpg', frame, encode_param)
+        # compacta o frame
+        encoded_img, result = compress_frame(frame, jpg_quality)
 
-        while encoded_img.nbytes > max_size:
+        while encoded_img.nbytes > MAX_FRAME_SIZE:
             jpg_quality -= 5
-            encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), jpg_quality]
-            result, encoded_img = cv2.imencode('.jpg', frame, encode_param)
+            encoded_img, result = compress_frame(frame, jpg_quality)
 
         if not result:
             break
@@ -105,6 +105,12 @@ def on_new_client(tcp, client_address_tcp, args):
     video.release()
 
     udp.close()
+
+
+def compress_frame(frame, jpg_quality):
+    encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), jpg_quality]
+    result, encoded_img = cv2.imencode('.jpg', frame, encode_param)
+    return encoded_img, result
 
 
 def main(args):
