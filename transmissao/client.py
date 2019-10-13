@@ -6,8 +6,8 @@ import numpy as np
 
 SERVER_ADDRESS_TCP = "localhost"  # endereco IP padrao
 SERVER_PORT_TCP = 65430  # porta padrao para conexao TCP
-BUFFER_SIZE = 1024  # tamanho padrao de buffer
-VIDEO_TIME = 65536  # TODO qual funcao disso
+MESSAGE_BUFFER_SIZE = 1024  # tamanho padrao de buffer de mensagens
+VIDEO_BUFFER_SIZE = 65536  # tamanho padrao do buffer de vídeo
 VIDEO_TIMEOUT = 2  # tempo de timeout sem receber dados de video do server
 SERVER_PORT_UDP = choice(range(4800, 65530))  # porta criada aleatoriamente entre os numeros possiveis para evitar conflitos
 
@@ -56,13 +56,13 @@ def get_videos_list(videos_available_bytes):
 def select_video(max_value, min_value):
     """ solicita ao cliente que escolha o video dada a lista anteriormente disponibilizada e valida a escolha dele """
     selected_video = int(input("\nEscolha o video que voce deseja ver e digite o numero correspondente: "))
-    while selected_video >= max_value or selected_video < min_value:
+    while selected_video > max_value or selected_video < min_value:
         selected_video = int(input("Valor escolhido nao esta de acordo com o disponivel, tente novamente."))
     return selected_video
 
 def video_choice(tcp):
     print("\nPegando vídeos disponiveis...")
-    videos_available_bytes = tcp.recv(BUFFER_SIZE)
+    videos_available_bytes = tcp.recv(MESSAGE_BUFFER_SIZE)
     videos = get_videos_list(videos_available_bytes)
 
     print("\nAqui estao os videos disponiveis:")
@@ -101,13 +101,12 @@ def main(args):
         cv2.resizeWindow(window, 600, 600)
 
     data = b''
-    buffer_size = VIDEO_TIME
     out = None
 
     try:
         # TODO refatorar para rodar so enqt tiver video - fechar a janela e dar print que o video acabou
         while True:
-            data += udp.recv(buffer_size)
+            data += udp.recv(VIDEO_BUFFER_SIZE)
             a = data.find(b'\xff\xd8')
             b = data.find(b'\xff\xd9')
             if a == -1 or b == -1:
