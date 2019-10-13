@@ -24,7 +24,8 @@ def create_tcp_socket(args):
     """ cria conexao tcp """
     print(args)
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.bind((args.ip, args.port))
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  # abre o socket mesmo que ainda exista outro socket aberto
+    s.bind((args.ip, args.port))  # liga o socket de fato
     s.listen()
     return s
 
@@ -43,7 +44,7 @@ def videos_list(client_address_tcp):
     return videos_available, videos_available_bytes
 
 
-def on_new_client(tcp, udp, client_address_tcp, args):
+def on_new_client(tcp, client_address_tcp, args):
     """ para cada cliente: estabelece a conexao TCP (listener), recebe cliente e abre conexao UDP para transmissao
     do video escolhido """
     videos_available, videos_available_bytes = videos_list(client_address_tcp)
@@ -59,6 +60,8 @@ def on_new_client(tcp, udp, client_address_tcp, args):
     port_bytes = tcp.recv(BUFFER_SIZE)  # o recv precisa de buffer pra transmissão de dados
     port = int.from_bytes(port_bytes, 'big')  # servidor recebe do cliente qual porta deve enviar os dados de vídeo
     client_address_udp = (client_address_tcp[0], port)  # cria clientAddress
+
+    udp = create_udp_socket()
 
     path = VIDEOS_PATH + '/' + videos_available[selected_video]  # encontra o video na pasta de video definida
     video = cv2.VideoCapture(path)
@@ -101,22 +104,24 @@ def on_new_client(tcp, udp, client_address_tcp, args):
 
     video.release()
 
-    tcp.close()
     udp.close()
 
 
 def main(args):
     """ cria a conexao tcp e a conexao udp  """
     tcp = create_tcp_socket(args)
-    udp = create_udp_socket()
 
     print('\nServidor iniciado! Esperando por clientes...')
 
-    while True:
-        """ espera o(s) cliente(s) conectarem"""
-        conn, client_address_tcp = tcp.accept()
-        print('\nConectado com o cliente: ', client_address_tcp)
-        threading.Thread(target=on_new_client, args=(conn, udp, client_address_tcp, args)).start()
+    try:
+        while True:
+            """ espera o(s) cliente(s) conectarem"""
+            conn, client_address_tcp = tcp.accept()
+            print('\nConectado com o cliente: ', client_address_tcp)
+            threading.Thread(target=on_new_client, args=(conn, client_address_tcp, args)).start()
+
+    finally:
+        tcp.close()
 
 
 def arg_parse():
