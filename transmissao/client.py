@@ -55,17 +55,10 @@ def get_videos_list(videos_available_bytes):
 
 def select_video(max_value, min_value):
     """ solicita ao cliente que escolha o video dada a lista anteriormente disponibilizada e valida a escolha dele """
-    try:
-        selected_video = int(input("\n\nEscolha o video que voce deseja ver e digite o numero correspondente: "))
-        print(max_value)
-        if max_value >= selected_video >= min_value:
-            return selected_video
-        else:
-            raise ValueError
-    except ValueError:
-        print("Valor escolhido nao esta de acordo com o disponivel, tente novamente.")
-        select_video(max_value)
-
+    selected_video = int(input("\nEscolha o video que voce deseja ver e digite o numero correspondente: "))
+    while selected_video >= max_value or selected_video < min_value:
+        selected_video = int(input("Valor escolhido nao esta de acordo com o disponivel, tente novamente."))
+    return selected_video
 
 def video_choice(tcp):
     print("\n\nPegando vídeos disponiveis...")

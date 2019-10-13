@@ -32,11 +32,10 @@ def create_tcp_socket(args):
     return s
 
 
-def videos_list(client_address_tcp):
+def videos_list():
     """ constroi a lista de videos para enviar ao cliente """
     videos_available = listdir(VIDEOS_PATH)
 
-    print("Enviando videos disponiveis...", client_address_tcp)
 
     videos_available_bytes = bytearray()
     for video in videos_available:
@@ -49,15 +48,20 @@ def videos_list(client_address_tcp):
 def on_new_client(tcp, client_address_tcp, args):
     """ para cada cliente: estabelece a conexao TCP (listener), recebe cliente e abre conexao UDP para transmissao
     do video escolhido """
-    videos_available, videos_available_bytes = videos_list(client_address_tcp)
+    
+    print("Enviando videos disponiveis...", client_address_tcp)
+
+    videos_available, videos_available_bytes = videos_list()
     tcp.sendall(videos_available_bytes)  # envia a lista de videos para o cliente
 
-    print("\n\nEsperando selecionar video. Cliente: ", client_address_tcp)
+    print("Esperando selecionar video. Cliente: ", client_address_tcp)
 
-    selected_video_bytes = tcp.recv(BUFFER_SIZE)  # servidor recebe do cliente qual porta deve enviar os dados de vídeo
-    selected_video = int.from_bytes(selected_video_bytes, 'big') - 1  # TODO explicar essa linha
+    selected_video_bytes = tcp.recv(BUFFER_SIZE)  # servidor recebe do cliente qual vídeo será enviado
 
-    print("\n\nVideo selecionado: ", selected_video, " por cliente: ", client_address_tcp)
+    selected_video = int.from_bytes(selected_video_bytes, 'big')   # converte os bytes para inteiro e subtrai 1
+    print(selected_video)
+
+    print("Video selecionado: ", selected_video, " por cliente: ", client_address_tcp)
 
     port_bytes = tcp.recv(BUFFER_SIZE)  # o recv precisa de buffer pra transmissão de dados
     port = int.from_bytes(port_bytes, 'big')  # servidor recebe do cliente qual porta deve enviar os dados de vídeo
@@ -72,7 +76,7 @@ def on_new_client(tcp, client_address_tcp, args):
     processing_start = time.time()
     jpg_quality = 80
 
-    print('\n\nTransmissao inciada para cliente: ', client_address_tcp)
+    print('Transmissao inciada para cliente: ', client_address_tcp)
 
     while video.isOpened():
         ret, frame = video.read()
@@ -123,7 +127,7 @@ def main(args):
         while True:
             """ espera o(s) cliente(s) conectarem"""
             conn, client_address_tcp = tcp.accept()
-            print('\nConectado com o cliente: ', client_address_tcp)
+            print('\n\nConectado com o cliente: ', client_address_tcp)
             threading.Thread(target=on_new_client, args=(conn, client_address_tcp, args)).start()
 
     finally:
@@ -133,7 +137,7 @@ def main(args):
 def arg_parse():
     """ analisa e separa os argumentos passados ao iniciar a execucao do server """
     parser = argparse.ArgumentParser(description='Server')
-    parser.add_argument("--video", help="Raiz de arquivos utilizada", default=VIDEOS_PATH)
+    parser.add_argument("--video", help="Pasta raiz de arquivos utilizada", default=VIDEOS_PATH)
     parser.add_argument("--fps", help="Definicao de frames por segundo para a transmissao", type=int, default=FPS)
     parser.add_argument("--port", help="Numero da porta TCP do servidor", type=int, default=SERVER_PORT_TCP)
     parser.add_argument("--ip", help="Endereco IP do servidor", default=SERVER_ADDRESS_TCP)
