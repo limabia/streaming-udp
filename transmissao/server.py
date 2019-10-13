@@ -54,7 +54,7 @@ def on_new_client(tcp, udp, client_address_tcp, args):
     selected_video_bytes = tcp.recv(BUFFER_SIZE)  # servidor recebe do cliente qual porta deve enviar os dados de vídeo
     selected_video = int.from_bytes(selected_video_bytes, 'big') - 1  # TODO explicar essa linha
 
-    print("\n\nVideo selecionado: ", videos_available[selected_video], " por cliente: ", client_address_tcp)
+    print("\n\nVideo selecionado: ", selected_video, " por cliente: ", client_address_tcp)
 
     port_bytes = tcp.recv(BUFFER_SIZE)  # o recv precisa de buffer pra transmissão de dados
     port = int.from_bytes(port_bytes, 'big')  # servidor recebe do cliente qual porta deve enviar os dados de vídeo
@@ -62,7 +62,6 @@ def on_new_client(tcp, udp, client_address_tcp, args):
 
     path = VIDEOS_PATH + '/' + videos_available[selected_video]  # encontra o video na pasta de video definida
     video = cv2.VideoCapture(path)
-    video_fps = video.get(cv2.CAP_PROP_FPS)
     desired_fps = args.fps
     max_size = VIDEO_TIME - 8  # less 8 bytes of video time
 

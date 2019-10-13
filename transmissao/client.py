@@ -112,16 +112,21 @@ def main(args):
 
     try:
         start = time.time()
+
+        # TODO refatorar para rodar so enqt tiver video - fechar a janela e dar print que o video acabou
         while True:
             data += udp.recv(buffer_size)
+            if not data:
+                break
+
             a = data.find(b'\xff\xd8')
             b = data.find(b'\xff\xd9')
-            if a != -1 and b != -1:
+            if a != -1 and b != -1:  # TODO explicar essa linha
                 jpg = data[a:b + 2]
                 vt = data[b + 2: b + 2 + 8]
                 data = data[b + 2 + 8:]
 
-                # decode frame and video time
+                # decode frame e tempo do video
                 frame = cv2.imdecode(np.frombuffer(jpg, dtype=np.uint8), cv2.IMREAD_COLOR)
                 vt = np.frombuffer(vt, dtype=np.float64)[0]
 
@@ -129,7 +134,7 @@ def main(args):
                 if args.gray:
                     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-                # salva o video no cliente caso ele tenha escolhido salvar se nao exibe na janela
+                # salva o video no cliente
                 if args.save:
                     if out is None:
                         out = get_video_writer(frame)
@@ -161,6 +166,7 @@ def arg_parse():
     parser.add_argument("--ip", help="Endereço IP do cliente", default="localhost")
     parser.add_argument("--port", help="Numero da porta de escuta (UDP)", type=int, default=8080)
     parser.add_argument("--gray", help="Converte video para escala de cinza", action="store_true")
+
     return parser.parse_args()
 
 
