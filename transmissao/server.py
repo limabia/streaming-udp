@@ -45,29 +45,29 @@ def videos_list():
     return videos_available, videos_available_bytes
 
 
-def on_new_client(tcp, client_address_tcp, args):
-    """ para cada cliente: estabelece a conexao TCP (listener), recebe cliente e abre conexao UDP para transmissao
-    do video escolhido """
+def on_new_client(tcp, client_address_tcp, udp, args):
+    """ para cada cliente conectado: envia os vídeos disponíveis, recebe o vídeo selecionado,
+    abre conexao UDP e faz a transmissão do vídeo escolhido """
     
     print("Enviando videos disponiveis...", client_address_tcp)
 
-    videos_available, videos_available_bytes = videos_list()
+    videos_available, videos_available_bytes = videos_list() #obtém os videos disponíveis na pasta
     tcp.sendall(videos_available_bytes)  # envia a lista de videos para o cliente
 
     print("Esperando selecionar video. Cliente: ", client_address_tcp)
 
     selected_video_bytes = tcp.recv(BUFFER_SIZE)  # servidor recebe do cliente qual vídeo será enviado
 
-    selected_video = int.from_bytes(selected_video_bytes, 'big')   # converte os bytes para inteiro e subtrai 1
-    print(selected_video)
+    selected_video = int.from_bytes(selected_video_bytes, 'big') - 1  # converte os bytes recebidos para inteiro e subtrai 1
+    # está sendo subtraído 1, pois o servidor se perde ao converter os bytes do inteiro 0, 
+    # logo a lista para o cliente escolher começa com o índice 1
 
     print("Video selecionado: ", selected_video, " por cliente: ", client_address_tcp)
 
-    port_bytes = tcp.recv(BUFFER_SIZE)  # o recv precisa de buffer pra transmissão de dados
-    port = int.from_bytes(port_bytes, 'big')  # servidor recebe do cliente qual porta deve enviar os dados de vídeo
-    client_address_udp = (client_address_tcp[0], port)  # cria clientAddress
+    port_bytes = tcp.recv(BUFFER_SIZE)  # servidor recebe do cliente qual porta UDP deverá enviar o vídeo
+    port = int.from_bytes(port_bytes, 'big') 
+    client_address_udp = (client_address_tcp[0], port)  # endereço UDP do cliente
 
-    udp = create_udp_socket()
 
     path = VIDEOS_PATH + '/' + videos_available[selected_video]  # encontra o video na pasta de video definida
     video = cv2.VideoCapture(path)
@@ -78,57 +78,66 @@ def on_new_client(tcp, client_address_tcp, args):
 
     print('Transmissao inciada para cliente: ', client_address_tcp)
 
-    while video.isOpened():
-        ret, frame = video.read()
-        if not ret:
-            break
+    try:
+        while video.isOpened():
+            ret, frame = video.read() #obtém o frame do vídeo
+            if not ret:
+                break
 
-        # compacta o frame
-        encoded_img, result = compress_frame(frame, jpg_quality)
-
-        while encoded_img.nbytes > MAX_FRAME_SIZE:
-            jpg_quality -= 5
+            # compacta o frame
             encoded_img, result = compress_frame(frame, jpg_quality)
 
-        if not result:
-            break
+            # diminui a qualidade de compactação, se caso o frame for maior que o tamanho máximo de pacotess
+            while encoded_img.nbytes > MAX_FRAME_SIZE:
+                jpg_quality -= 5
+                encoded_img, result = compress_frame(frame, jpg_quality)
 
-        vt = np.array([video.get(cv2.CAP_PROP_POS_MSEC) / 1000], dtype=np.float64)
-        data = encoded_img.tobytes() + vt.tobytes()
+            if not result:
+                break
 
-        udp.sendto(data, client_address_udp)
+            # concatena o tempo de vídeo aos bytes do frame
+            vt = np.array([video.get(cv2.CAP_PROP_POS_MSEC) / 1000], dtype=np.float64)
+            data = encoded_img.tobytes() + vt.tobytes()
 
-        end = time.time()
+            udp.sendto(data, client_address_udp) # envia frame para o cliente
 
-        processing_time = end - processing_start
-        desired_time = 1 / desired_fps
-        if desired_time > processing_time:
-            time.sleep(desired_time - processing_time)
-        processing_start = time.time()
+            end = time.time()
 
-    video.release()
+            # calcula o fps de acordo com o tempo ocorrido para envio de 1 frame e ajusta caso esteja maior que o desejado
+            processing_time = end - processing_start
+            desired_time = 1 / desired_fps
+            if desired_time > processing_time:
+                time.sleep(desired_time - processing_time)
+            processing_start = time.time()
 
-    udp.close()
+    finally:
+        # libera o vídeo e encerra conexão
+        print('\Encerrando conexão com o cliente: ', client_address_tcp)
+        video.release()
+        udp.close()
+        tcp.close()
 
 
 def compress_frame(frame, jpg_quality):
+    """ comprime o frame utilizando .jpg """
     encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), jpg_quality]
     result, encoded_img = cv2.imencode('.jpg', frame, encode_param)
     return encoded_img, result
 
 
 def main(args):
-    """ cria a conexao tcp e a conexao udp  """
+    """ cria a conexao tcp """
     tcp = create_tcp_socket(args)
+    udp = create_udp_socket()
 
     print('\nServidor iniciado! Esperando por clientes...')
 
     try:
         while True:
-            """ espera o(s) cliente(s) conectarem"""
+            """ espera o(s) cliente(s) conectarem e estabelece uma conexao TCP """
             conn, client_address_tcp = tcp.accept()
             print('\n\nConectado com o cliente: ', client_address_tcp)
-            threading.Thread(target=on_new_client, args=(conn, client_address_tcp, args)).start()
+            threading.Thread(target=on_new_client, args=(conn, client_address_tcp, udp, args)).start()
 
     finally:
         tcp.close()

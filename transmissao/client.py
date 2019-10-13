@@ -61,11 +61,11 @@ def select_video(max_value, min_value):
     return selected_video
 
 def video_choice(tcp):
-    print("\n\nPegando vídeos disponiveis...")
+    print("\nPegando vídeos disponiveis...")
     videos_available_bytes = tcp.recv(BUFFER_SIZE)
     videos = get_videos_list(videos_available_bytes)
 
-    print("\n\nAqui estao os videos disponiveis:")
+    print("\nAqui estao os videos disponiveis:")
     for idx, video in enumerate(videos):
         print("[", idx + 1, "] ", video)
 
@@ -78,13 +78,13 @@ def main(args):
     tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     tcp.connect((SERVER_ADDRESS_TCP, SERVER_PORT_TCP))
 
-    print("\n\nOla, cliente. Voce esta conectado ao servidor, seja bem vindo!!! =) ")
+    print("\nOla, cliente. Voce esta conectado ao servidor, seja bem vindo!!! =) ")
 
     selected_video = video_choice(tcp)
 
     tcp.sendall(selected_video.to_bytes((selected_video.bit_length() + 7) // 8, 'big'))
 
-    print("\n\nReproduzindo video...")
+    print("\nReproduzindo video...")
 
     print('args:', args)
 
@@ -141,6 +141,7 @@ def main(args):
     finally:
         cv2.destroyAllWindows()
         udp.close()
+        tcp.close()
         if args.save:
             out.release()
 
