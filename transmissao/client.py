@@ -1,8 +1,6 @@
 import argparse
 import socket
-import time
-import keyboard
-
+from random import choice
 import cv2
 import numpy as np
 
@@ -10,7 +8,8 @@ SERVER_ADDRESS_TCP = "localhost"  # endereco IP padrao
 SERVER_PORT_TCP = 65430  # porta padrao para conexao TCP
 BUFFER_SIZE = 1024  # tamanho padrao de buffer
 VIDEO_TIME = 65536  # TODO qual funcao disso
-VIDEO_TIMEOUT = 2 # tempo de timeout sem receber dados de video do server
+VIDEO_TIMEOUT = 2  # tempo de timeout sem receber dados de video do server
+SERVER_PORT_UDP = choice(range(4800, 65530))  # porta criada aleatoriamente entre os numeros possiveis para evitar conflitos
 
 
 def get_video_writer(frame):
@@ -154,7 +153,7 @@ def arg_parse():
     parser = argparse.ArgumentParser(description='Client')
     parser.add_argument('--save', default=False, help='Salvar o video', action='store_true')
     parser.add_argument("--ip", help="Endereço IP do cliente", default="localhost")
-    parser.add_argument("--port", help="Numero da porta de escuta (UDP)", type=int, default=8080)
+    parser.add_argument("--port", help="Numero da porta de escuta (UDP)", type=int, default=SERVER_PORT_UDP)
     parser.add_argument("--gray", help="Converte video para escala de cinza", action="store_true")
 
     return parser.parse_args()
