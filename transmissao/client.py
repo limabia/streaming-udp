@@ -139,7 +139,7 @@ def main(args):
                 out.write(frame)
             else:
                 cv2.imshow(window, frame)
-                if cv2.waitKey(1) & 0xFF == ord('q'):
+                if cv2.waitKey(1) & 0xFF == ord('q') or cv2.getWindowProperty(window, cv2.WND_PROP_VISIBLE) < 1:
                     break
     finally:
         cv2.destroyAllWindows()
