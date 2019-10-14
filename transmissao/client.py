@@ -35,6 +35,7 @@ def create_udp_socket(ip, port):
     """ cria conexao udp utilizando ip e porta passado """
     udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     udp.bind((ip, port))
+    udp.settimeout(VIDEO_TIMEOUT)
     return udp
 
 
@@ -92,7 +93,6 @@ def main(args):
     tcp.sendall(port.to_bytes((port.bit_length() + 7) // 8, 'big'))
 
     udp = create_udp_socket(args.ip, args.port)
-    udp.settimeout(VIDEO_TIMEOUT)
 
     window = 'Transmissao de Video'
     if not args.save:
