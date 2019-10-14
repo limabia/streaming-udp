@@ -14,7 +14,7 @@ SERVER_PORT_UDP = choice(range(4800, 65530))  # porta criada aleatoriamente entr
 
 def get_video_writer(frame):
     """ responsavel por gravar o video no cliente """
-    print("\n\nSalvando video...")
+    print("Salvando video...")
     w, h = frame.shape[1], frame.shape[0]
     is_color = True
 
@@ -27,7 +27,6 @@ def get_video_writer(frame):
     name = "video-salvo.avi"
     vr = cv2.VideoWriter(name, fourcc, 10, (w, h), is_color)
 
-    print("\n\nVideo salvo!")
     return vr
 
 
@@ -79,15 +78,14 @@ def main(args):
     tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     tcp.connect((SERVER_ADDRESS_TCP, SERVER_PORT_TCP))
 
-    print("\nOla, cliente. Voce esta conectado ao servidor, seja bem vindo!!! =) ")
+    print("Ola, cliente. Voce esta conectado ao servidor, seja bem vindo!!! =) ")
 
     selected_video = video_choice(tcp)
 
     tcp.sendall(selected_video.to_bytes((selected_video.bit_length() + 7) // 8, 'big'))
 
-    print("\nReproduzindo video...")
-
-    print('args:', args)
+    if not args.save:
+        print("Reproduzindo video...")
 
     port = int(args.port)
     tcp.sendall(port.to_bytes((port.bit_length() + 7) // 8, 'big'))
@@ -137,7 +135,13 @@ def main(args):
                 cv2.imshow(window, frame)
                 if cv2.waitKey(1) & 0xFF == ord('q') or cv2.getWindowProperty(window, cv2.WND_PROP_VISIBLE) < 1:
                     break
+                
+    except:
+        pass
     finally:
+        if args.save:
+            print("Vídeo Salvo!")            
+        print("Encerrando conexão com o servidor")
         cv2.destroyAllWindows()
         udp.close()
         tcp.close()

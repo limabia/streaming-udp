@@ -11,7 +11,7 @@ SERVER_ADDRESS_TCP = "localhost"  # endereco IP padrao
 SERVER_PORT_TCP = 65430  # porta padrao para conexao TCP
 VIDEOS_PATH = 'videos'  # pasta padrao para os videos
 MESSAGE_BUFFER_SIZE = 1024  # tamanho padrao de buffer
-FPS = 15  # numero de frames por segundo padrao
+FPS = 30  # numero de frames por segundo padrao
 VIDEO_BUFFER_SIZE = 65536  # Tamanho máximo do pacote (em bytes)
 # Tamanho maximo do frame (em bytes)
 MAX_FRAME_SIZE = VIDEO_BUFFER_SIZE - 8  # tamanho do pacote menos 8 bytes de tempo do vídeo
