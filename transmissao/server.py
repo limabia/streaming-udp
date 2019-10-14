@@ -138,6 +138,8 @@ def main(args):
             print('\n\nConectado com o cliente: ', client_address_tcp)
             threading.Thread(target=on_new_client, args=(conn, client_address_tcp, udp, args)).start()
 
+    except:
+        pass
     finally:
         tcp.close()
         udp.close()
@@ -156,11 +158,16 @@ def arg_parse():
 
 if __name__ == '__main__':
     """ recebe os argumentos e inicia uma thread com os argumentos passados na inicializacao do servidor """
-    arguments = arg_parse()
-    print("Server.py iniciando a execucao. Argumentos recebidos: ", arguments)
+    try:
+        arguments = arg_parse()
+        print("Server.py iniciando a execucao. Argumentos recebidos: ", arguments)
 
-    t = threading.Thread(target=main, args=(arguments,), daemon=True)
-    t.start()
+        t = threading.Thread(target=main, args=(arguments,), daemon=True)
+        t.start()
 
-    while t.is_alive():
-        t.join(.5)
+        while t.is_alive():
+            t.join(.5)
+    except:
+        pass
+    finally:
+        print('\nEncerrando servidor...')
