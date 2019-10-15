@@ -34,7 +34,7 @@ def create_udp_socket(ip, port):
     """ cria conexao udp utilizando ip e porta passado """
     udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     udp.bind((ip, port))
-    udp.settimeout(VIDEO_TIMEOUT)
+    udp.settimeout(VIDEO_TIMEOUT)  # fecha a conexao se ultrapassar o tempo, fecha quando o video termina
     return udp
 
 
@@ -88,9 +88,9 @@ def main(args):
         print("Reproduzindo video...")
 
     port = int(args.port)
-    tcp.sendall(port.to_bytes((port.bit_length() + 7) // 8, 'big'))
 
-    udp = create_udp_socket(args.ip, args.port)
+    udp = create_udp_socket(args.ip, args.port)  # porta para envio de frame - criando o udp para enviar a porta utilizada para o servidor
+    tcp.sendall(port.to_bytes((port.bit_length() + 7) // 8, 'big'))
 
     window = 'Transmissao de Video'
     if not args.save:
@@ -102,7 +102,6 @@ def main(args):
     out = None
 
     try:
-        # TODO refatorar para rodar so enqt tiver video - fechar a janela e dar print que o video acabou
         while True:
             data += udp.recv(VIDEO_BUFFER_SIZE)
             a = data.find(b'\xff\xd8')
@@ -133,6 +132,7 @@ def main(args):
                 out.write(frame)
             else:
                 cv2.imshow(window, frame)
+                # fecha janela quando a tecla "q" eh pressionada ou quando clica no X da janela
                 if cv2.waitKey(1) & 0xFF == ord('q') or cv2.getWindowProperty(window, cv2.WND_PROP_VISIBLE) < 1:
                     break
                 

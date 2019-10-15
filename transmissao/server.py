@@ -167,7 +167,5 @@ if __name__ == '__main__':
 
         while t.is_alive():
             t.join(.5)
-    except:
-        pass
     finally:
         print('\nEncerrando servidor...')
