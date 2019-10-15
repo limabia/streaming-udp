@@ -9,7 +9,7 @@ SERVER_PORT_TCP = 65430  # porta padrao para conexao TCP
 MESSAGE_BUFFER_SIZE = 1024  # tamanho padrao de buffer de mensagens
 VIDEO_BUFFER_SIZE = 65536  # tamanho padrao do buffer de vídeo
 VIDEO_TIMEOUT = 2  # tempo de timeout sem receber dados de video do server
-SERVER_PORT_UDP = choice(range(4800, 65530))  # porta criada aleatoriamente entre os numeros possiveis para evitar conflitos
+CLIENT_PORT_UDP = choice(range(4800, 65530))  # porta criada aleatoriamente entre os numeros possiveis para evitar conflitos
 
 
 def get_video_writer(frame):
@@ -162,7 +162,7 @@ def arg_parse():
     parser = argparse.ArgumentParser(description='Client')
     parser.add_argument('--save', default=False, help='Salvar o video', action='store_true')
     parser.add_argument("--ip", help="Endereço IP do cliente", default="localhost")
-    parser.add_argument("--port", help="Numero da porta de escuta (UDP)", type=int, default=SERVER_PORT_UDP)
+    parser.add_argument("--port", help="Numero da porta de escuta (UDP)", type=int, default=CLIENT_PORT_UDP)
     parser.add_argument("--gray", help="Converte video para escala de cinza", action="store_true")
     parser.add_argument("--show-time", help="Mostra o tempo de vídeo", action="store_true")
 
