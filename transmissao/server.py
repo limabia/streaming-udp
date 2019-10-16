@@ -32,10 +32,9 @@ def create_tcp_socket(args):
     return s
 
 
-def videos_list():
+def videos_list(path):
     """ constroi a lista de videos para enviar ao cliente """
-    videos_available = listdir(VIDEOS_PATH)
-
+    videos_available = listdir(path)
 
     videos_available_bytes = bytearray()
     for video in videos_available:
@@ -51,7 +50,7 @@ def on_new_client(tcp, client_address_tcp, udp, args):
     
     print("Enviando videos disponiveis...", client_address_tcp)
 
-    videos_available, videos_available_bytes = videos_list() #obtém os videos disponíveis na pasta
+    videos_available, videos_available_bytes = videos_list(args.video)  # obtém os videos disponíveis na pasta
     tcp.sendall(videos_available_bytes)  # envia a lista de videos para o cliente
 
     print("Esperando selecionar video. Cliente: ", client_address_tcp)
@@ -68,8 +67,7 @@ def on_new_client(tcp, client_address_tcp, udp, args):
     port = int.from_bytes(port_bytes, 'big') 
     client_address_udp = (client_address_tcp[0], port)  # endereço UDP do cliente
 
-
-    path = VIDEOS_PATH + '/' + videos_available[selected_video]  # encontra o video na pasta de video definida
+    path = args.video + '/' + videos_available[selected_video]  # encontra o video na pasta de video definida
     video = cv2.VideoCapture(path)
     desired_fps = args.fps
 
