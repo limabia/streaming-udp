@@ -46,10 +46,11 @@ def videos_list(path):
                 videos_available_bytes.extend(bytearray(video, "utf-8"))
                 videos_available_bytes.extend(bytearray("\n", "utf-8"))
         else:
-            print("\n\nNão existem vídeos nessa pasta")
+            print("Não existem vídeos nessa pasta")
 
     except FileNotFoundError:
-        print("\n\nPasta referenciada não existe")
+        print("Pasta referenciada não existe")
+
     return videos_available, videos_available_bytes
 
 
@@ -57,9 +58,16 @@ def on_new_client(tcp, client_address_tcp, udp, args):
     """ para cada cliente conectado: envia os vídeos disponíveis, recebe o vídeo selecionado,
     abre conexao UDP e faz a transmissão do vídeo escolhido """
     
+    path = args.video
+
+    videos_available, videos_available_bytes = videos_list(path)  # obtém os videos disponíveis na pasta
+
+    while(not videos_available_bytes):
+        path = input("\nPor favor, insira o diretório que contém os vídeos: ")
+        videos_available, videos_available_bytes = videos_list(path)  # obtém os videos disponíveis na pasta
+
     print("Enviando videos disponiveis...", client_address_tcp)
 
-    videos_available, videos_available_bytes = videos_list(args.video)  # obtém os videos disponíveis na pasta
     tcp.sendall(videos_available_bytes)  # envia a lista de videos para o cliente
 
     print("Esperando selecionar video. Cliente: ", client_address_tcp)
@@ -76,7 +84,7 @@ def on_new_client(tcp, client_address_tcp, udp, args):
     port = int.from_bytes(port_bytes, 'big') 
     client_address_udp = (client_address_tcp[0], port)  # endereço UDP do cliente
 
-    path = args.video + '/' + videos_available[selected_video]  # encontra o video na pasta de video definida
+    path = path + '/' + videos_available[selected_video]  # encontra o video na pasta de video definida
     video = cv2.VideoCapture(path)
     desired_fps = args.fps
 
