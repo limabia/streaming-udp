@@ -34,13 +34,22 @@ def create_tcp_socket(args):
 
 def videos_list(path):
     """ constroi a lista de videos para enviar ao cliente """
-    videos_available = listdir(path)
+    videos_available = None
+    videos_available_bytes = None
 
-    videos_available_bytes = bytearray()
-    for video in videos_available:
-        videos_available_bytes.extend(bytearray(video, "utf-8"))
-        videos_available_bytes.extend(bytearray("\n", "utf-8"))
+    try:
+        videos_available = listdir(path)
 
+        if videos_available:
+            videos_available_bytes = bytearray()
+            for video in videos_available:
+                videos_available_bytes.extend(bytearray(video, "utf-8"))
+                videos_available_bytes.extend(bytearray("\n", "utf-8"))
+        else:
+            print("\n\nNão existem vídeos nessa pasta")
+
+    except FileNotFoundError:
+        print("\n\nPasta referenciada não existe")
     return videos_available, videos_available_bytes
 
 
